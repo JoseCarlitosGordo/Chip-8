@@ -8,3 +8,5 @@ class Stack():
     
     def push(self, content):
         self.list.append(content)
+    def top(self):
+        return self.list[-1]
