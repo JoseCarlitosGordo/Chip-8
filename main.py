@@ -56,20 +56,45 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 while True:
     # 1. Fetch 16-bit opcode (2 bytes)
-    current_instruction = ram[pc:pc + 2]
+    current_instruction = ram[pc][2:] + ram[pc+1][2:]
     pc += 2
     
     # 2. Decode & Execute instruction
-        #obtain the first part of the hexadecimal number (0x200)
-    # first_half_byte = current_instruction[2]
-    # second_nibble = current_instruction[3]
-    # third_nibble = current_instruction[4]
-    # fourth_nibble = current_instruction[5]
-    opcode = current_instruction[2:6]
+        #obtain the first part of the hexadecimal number (0x2000)
+    first_half_byte = current_instruction[0]
+    second_nibble = current_instruction[1]
+    third_nibble = current_instruction[2]
+    fourth_nibble = current_instruction[3]
+    #opcode = current_instruction[2:6]
 
-    match opcode:
-        case("00E0"):
-            screen.fill((0,0,0))
+    match first_half_byte:
+        case"0":
+            match fourth_nibble:
+                case"0":
+
+                    screen.fill((0,0,0))
+                case"E":
+                    pass
+    
+        case"1":
+            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
+        case "6":
+            registry[int("0x"+second_nibble, 16)] = int("0x"+ third_nibble + fourth_nibble, 16)
+        case "7":
+             registry[int("0x"+second_nibble, 16)] += int("0x"+third_nibble + fourth_nibble, 16)
+        case "A":
+            current_instruction = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
+        case "D":
+            vx =int("0x"+second_nibble, 16)
+            vy = int("0x"+third_nibble, 16)
+            x = (registry[vx]*100) % WIDTH
+            y = (registry[vy]*100) % HEIGHT
+            registry[15] = 0
+            
+            i = 0
+            n = int(fourth_nibble, 16)
+            while i < n:
+                pass
 
     # 3. Update Timers (60Hz)
     # 4. Update Screen
