@@ -24,7 +24,8 @@ except Exception as e:
     print("Error! " + e)
 
 #PROGRAM COUNTER (All programs start at location 0x200 in memory. Since instructions are 16 bits, instructions take up 16 bits (2 bytes of RAM)
-pc = 0x200+1
+pc = 0x200 + 1
+print(f"{ram[pc]:02x}")
 #timers
 delay_timer = min(max(0, COUNTER), 255) #holder for 8-bit timer
 sound_timer = min(max(0, COUNTER), 255)
@@ -65,8 +66,9 @@ while True:
         print("Program reached end of memory.")
         break # or sys.exit()
     current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}"
+    print (f"{ram[pc]:02x}")
     print("current_instruction:" +current_instruction)
-    pc += 2
+   
   
     # 2. Decode & Execute instruction
         #obtain the first part of the hexadecimal number (0x2000)
@@ -86,23 +88,21 @@ while True:
                     pass
     
         case"1":
-
-            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
-            print(f"jumped to {str(pc)}")
-            break
+            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) - 1
+            print(f"jumped to {hex(pc)}")
+            
         case "6":
             registry[int("0x"+second_nibble, 16)] = int("0x"+ third_nibble + fourth_nibble, 16)
             print(f"set registry at {int("0x"+second_nibble, 16)} to {registry[int("0x"+second_nibble, 16)]}")
-            #break
         case "7":
-            registry[int("0x"+second_nibble, 16)] += int("0x"+third_nibble + fourth_nibble, 16)
+            registry[int("0x"+second_nibble, 16)] = (registry[int("0x"+second_nibble, 16)] + int("0x"+third_nibble + fourth_nibble, 16)) & 0xff
             print(f"Result: {registry[int("0x"+second_nibble, 16)]} ")
-            break
-        case "A":
+        
+        case "A" | "a":
             I = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             print(f"set I to {int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)} ")
-            break
-        case "D":
+            
+        case "D" | "d":
             vx =int("0x"+second_nibble, 16)
             vy = int("0x"+third_nibble, 16)
             initial_x = (registry[vx] % 64)* 10 
@@ -131,7 +131,7 @@ while True:
                             #screen.set_at((draw_x, draw_y), (255,255,255,255))
                             pygame.draw.rect(screen, (255,255,255,255), (draw_x, draw_y, 10, 10))
                             print("filling pixel")
-
+    pc += 2
 
 
             
