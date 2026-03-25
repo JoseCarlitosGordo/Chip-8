@@ -80,17 +80,31 @@ while True:
 
     match first_half_byte:
         case"0":
-            match fourth_nibble:
-                case"0":
+            match second_nibble + third_nibble + fourth_nibble:
+                case"0E0":
 
                     screen.fill((0,0,0))
-                case"E":
-                    pass
+                case"0EE":
+                    pc = stack_memory.pop()
     
         case"1":
             pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) - 1
             print(f"jumped to {hex(pc)}")
-            
+        
+        case "2":
+            #store the last known position of program in stack_memory to be popped later before jumping
+            stack_memory.push(pc)
+            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) - 1
+        case "3":
+            VX = int("0x"+second_nibble, 16)
+            NN = third_nibble + fourth_nibble
+            if registry[VX]== NN:
+                pc += 2
+        case "4":
+            VX = int("0x"+second_nibble, 16)
+            NN = third_nibble + fourth_nibble
+            if registry[VX] != NN:
+                pc += 2
         case "6":
             registry[int("0x"+second_nibble, 16)] = int("0x"+ third_nibble + fourth_nibble, 16)
             print(f"set registry at {int("0x"+second_nibble, 16)} to {registry[int("0x"+second_nibble, 16)]}")
@@ -112,12 +126,14 @@ while True:
             
             n = int(fourth_nibble, 16)
             
+            #iterate over rows
             for i in range(n):
                 if I + i >= len(ram):
                     print("breaking in draw")
                     break
                 draw_y = (initial_y + (i * 10)) % 320 
                 current_pixel = ram[I+i]
+                #iterate over cols
                 for k in range(8):
                     draw_x = (initial_x + (k * 10)) % 640
                     #use bitshifting to get the rightmost bit in the byte and check if it is a 1
@@ -143,83 +159,3 @@ while True:
     pygame.display.flip()
     # 5. Sleep to maintain 500Hz-1kHz
     time.sleep(1/60)
-# while True:
-#     # 1. Fetch 16-bit opcode
-#     if pc >= len(ram) - 1:
-#         print("Program reached end of memory.")
-#         break
-
-#     # Use bitwise instead of strings for cleaner decoding
-#     opcode = (ram[pc] << 8) | ram[pc+1]
-    
-#     # We increment PC here, so Jumps need to account for this or use 'continue'
-#     pc += 2 
-  
-#     # Extract nibbles
-#     first_nibble  = (opcode & 0xF000) >> 12
-#     second_nibble = (opcode & 0x0F00) >> 8
-#     third_nibble  = (opcode & 0x00F0) >> 4
-#     fourth_nibble = (opcode & 0x000F)
-#     nnn           = (opcode & 0x0FFF)
-#     nn            = (opcode & 0x00FF)
-
-#     match first_nibble:
-#         case 0:
-#             if nnn == 0x0E0:
-#                 screen.fill((0, 0, 0))
-        
-#         case 1: # JP addr
-#             pc = nnn # Jump to address
-#             # We don't want the pc += 2 at the top to skip the first instruction of the jump
-#             # so we 'continue' to start the loop over with the new PC immediately
-#             continue 
-
-#         case 6: # LD Vx, byte
-#             registry[second_nibble] = nn
-            
-#         case 7: # ADD Vx, byte
-#             registry[second_nibble] = (registry[second_nibble] + nn) & 0xFF
-            
-#         case 0xA: # LD I, addr
-#             I = nnn
-            
-#         case 0xD: # DRW Vx, Vy, nibble
-#             vx = registry[second_nibble]
-#             vy = registry[third_nibble]
-#             n  = fourth_nibble
-#             registry[15] = 0
-            
-#             for row in range(n):
-#                 sprite_byte = ram[I + row]
-#                 for col in range(8):
-#                     if I + row >= len(ram):
-#                         print(f"I out of bounds: {I + row}")
-#                         break
-#                     if (sprite_byte & (0x80 >> col)):
-#                         # Scale coordinates by 10 (64 -> 640, 32 -> 320)
-#                         # We use % to wrap around the screen (standard CHIP-8 behavior)
-#                         draw_x = ((vx + col) % 64) * 10
-#                         draw_y = ((vy + row) % 32) * 10
-                        
-#                         # Draw a 10x10 block for the "pixel"
-#                         pixel_rect = pygame.Rect(draw_x, draw_y, 10, 10)
-                        
-#                         # Simplistic XOR: if pixel is white, make it black (and set VF=1)
-#                         # For the IBM logo, it usually starts black, so we just draw white
-#                         current_color = screen.get_at((draw_x, draw_y))
-#                         if current_color == (255, 255, 255, 255):
-#                             pygame.draw.rect(screen, (0, 0, 0), pixel_rect)
-#                             registry[15] = 1
-#                         else:
-#                             pygame.draw.rect(screen, (255, 255, 255), pixel_rect)
-
-#     # 4. Update Screen (Crucial! Without this, the window stays black)
-#     pygame.display.flip()
-
-#     # 5. Handle Pygame events (prevents "Not Responding" freeze)
-#     for event in pygame.event.get():
-#         if event.type == pygame.QUIT:
-#             pygame.quit()
-#             sys.exit()
-
-#     time.sleep(1/500) # IBM Logo looks better at higher speeds (~500Hz)
