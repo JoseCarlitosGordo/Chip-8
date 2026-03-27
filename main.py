@@ -105,6 +105,12 @@ while True:
             NN = third_nibble + fourth_nibble
             if registry[VX] != NN:
                 pc += 2
+        case "5":
+            VX = int("0x"+second_nibble, 16)
+            VY = int("0x"+third_nibble, 16)
+            if registry[VX] == registry[VY]:
+                pc += 2
+
         case "6":
             registry[int("0x"+second_nibble, 16)] = int("0x"+ third_nibble + fourth_nibble, 16)
             print(f"set registry at {int("0x"+second_nibble, 16)} to {registry[int("0x"+second_nibble, 16)]}")
