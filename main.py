@@ -155,6 +155,7 @@ while True:
                     shifted_out_val = registry[VX] & 128
                     registry[VX] <<= 1
                     registry[15] = shifted_out_val
+                
 
                     
                     
