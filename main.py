@@ -6,6 +6,7 @@ import sys
 #memory (4 KiloBytes of ram)
 
 file_path = sys.argv[1]
+shift_vx_in_place = int(sys.argv[2])
 print(sys.argv)
 ram = bytearray(4096) 
 try:
@@ -66,7 +67,6 @@ while True:
         print("Program reached end of memory.")
         break # or sys.exit()
     current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}"
-    print (f"{ram[pc]:02x}")
     print("current_instruction:" +current_instruction)
    
   
@@ -118,10 +118,66 @@ while True:
             registry[int("0x"+second_nibble, 16)] = (registry[int("0x"+second_nibble, 16)] + int("0x"+third_nibble + fourth_nibble, 16)) & 0xff
             print(f"Result: {registry[int("0x"+second_nibble, 16)]} ")
         
+        case "8":
+            VX = int("0x"+second_nibble, 16)
+            VY = int("0x"+third_nibble, 16) 
+            match fourth_nibble:
+                case "0":
+                    
+                    registry[VX] = registry[VY]
+                case "1":
+                    registry[VX] = registry[VX] | registry[VY]
+                case "2":
+                    registry[VX] = registry[VX] & registry[VY]
+                case "3":
+                    registry[VX] = registry[VX] ^ registry[VY]
+                case "4":
+                    registry[VX] += registry[VY]
+                    #if num goes over 8-bit limit, set flag register to 1/True
+                    if registry[VX] > 255:
+                        registry[15] = 1
+                    else:
+                        registry[15] = 0
+                case "5":
+                    registry[15] = 1 if registry[VX] > registry[VY] else 0
+                    registry[VX] -= registry[VY]
+                case "6":
+                    if shift_vx_in_place == 0:
+                        registry[VX] = registry[VY]
+                    
+                    shifted_out_val = registry[VX] & 1
+                    registry[VX] >>= 1
+                    registry[15] = shifted_out_val
+                case "E" | "e":
+                    if shift_vx_in_place == 0:
+                        registry[VX] = registry[VY]
+                    
+                    shifted_out_val = registry[VX] & 128
+                    registry[VX] <<= 1
+                    registry[15] = shifted_out_val
+
+                    
+                    
+
+
+                case "7":
+                    registry[15] = 1 if registry[VY] > registry[VX] else 0
+                    registry[VX] = registry[VY] - registry[VX]
+                
+
+
+        case "9":
+            VX = int("0x"+second_nibble, 16)
+            VY = int("0x"+third_nibble, 16)
+            if registry[VX] != registry[VY]:
+                pc += 2
+
         case "A" | "a":
             I = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             print(f"set I to {int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)} ")
-            
+        case "B":
+            NNN = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
+            pc = NNN + registry[0]
         case "D" | "d":
             vx =int("0x"+second_nibble, 16)
             vy = int("0x"+third_nibble, 16)
@@ -164,4 +220,4 @@ while True:
     # 4. Update Screen
     pygame.display.flip()
     # 5. Sleep to maintain 500Hz-1kHz
-    time.sleep(1/60)
+    time.sleep(1)
