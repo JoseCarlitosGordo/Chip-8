@@ -1,3 +1,5 @@
+import random
+
 import pygame
 from constants import COUNTER, WIDTH, HEIGHT
 from stack import Stack
@@ -89,21 +91,21 @@ while True:
                     pc = stack_memory.pop()
     
         case"1":
-            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) - 1
+            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) -1 
             print(f"jumped to {hex(pc)}")
         
         case "2":
             #store the last known position of program in stack_memory to be popped later before jumping
             stack_memory.push(pc)
-            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) - 1
+            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)  - 1
         case "3":
             VX = int("0x"+second_nibble, 16)
-            NN = third_nibble + fourth_nibble
+            NN = int("0x"+third_nibble + fourth_nibble, 16)
             if registry[VX]== NN:
                 pc += 2
         case "4":
             VX = int("0x"+second_nibble, 16)
-            NN = third_nibble + fourth_nibble
+            NN = int("0x"+third_nibble + fourth_nibble, 16)
             if registry[VX] != NN:
                 pc += 2
         case "5":
@@ -174,11 +176,15 @@ while True:
         case "B":
             NNN = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             pc = NNN + registry[0]
+        case "C":
+            VX = int("0x"+second_nibble, 16)
+            NN = int("0x"+ third_nibble + fourth_nibble, 16)
+            registry[VX] = random.randint(0, 255) & NN
         case "D" | "d":
             vx =int("0x"+second_nibble, 16)
             vy = int("0x"+third_nibble, 16)
-            initial_x = (registry[vx] % 64)* 10 
-            initial_y = (registry[vy] % 32 ) * 10
+            initial_x = registry[vx] % 64
+            initial_y = registry[vy] % 32
             registry[15] = 0
              
            
@@ -190,14 +196,18 @@ while True:
                 if I + i >= len(ram):
                     print("breaking in draw")
                     break
-                draw_y = (initial_y + (i * 10)) % 320 
+                draw_y = ((initial_y +i) %32) *10 
+                if draw_y >= 320:
+                    continue
                 current_pixel = ram[I+i]
                 #iterate over cols
                 for k in range(8):
-                    draw_x = (initial_x + (k * 10)) % 640
+                    draw_x = ((initial_x + k) %64) *10
+                    if draw_x >= 640:
+                        continue
                     #use bitshifting to get the rightmost bit in the byte and check if it is a 1
                     if (current_pixel >> (7 - k)) & 1:
-                        if screen.get_at((draw_x, draw_y))[:3]!= (0,0,0):
+                        if screen.get_at((draw_x+5, draw_y+5))[:3]!= (0,0,0):
                             pygame.draw.rect(screen, (0,0,0,255), (draw_x, draw_y, 10, 10))
                             print("clearing pixel")
                             registry[15] = 1
@@ -238,4 +248,4 @@ while True:
     # 4. Update Screen
     pygame.display.flip()
     # 5. Sleep to maintain 500Hz-1kHz
-    time.sleep(1)
+    time.sleep(1/60)
