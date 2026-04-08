@@ -217,11 +217,9 @@ while True:
             VX = int("0x"+second_nibble, 16)
             match(third_nibble+fourth_nibble):
                 case "9E":
-                    if keyboard.is_pressed(registry[VX] &0xF):
-                        pc += 2
+                    pass
                 case "A1":
-                    if not keyboard.is_pressed(registry[VX] &0xF):
-                        pc += 2
+                    pass
         case "F":
             match(third_nibble+fourth_nibble):
                 case "1E":
@@ -229,7 +227,7 @@ while True:
                 case "29":
                     VX = int("0x"+second_nibble, 16)
                     #since one font character takes up 5 bytes, we multiply by 5 to get the correct font 
-                    I = 0x50 + ((registry[VX] & 0xF) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
+                    I = 0x50 + ((registry[VX] & 0x0F) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
 
                      
     pc += 2
