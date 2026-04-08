@@ -3,8 +3,6 @@ from constants import COUNTER, WIDTH, HEIGHT
 from stack import Stack
 import time
 import sys
-import random
-import keyboard
 #memory (4 KiloBytes of ram)
 
 file_path = sys.argv[1]
@@ -42,7 +40,7 @@ current_instruction = None
 registry = [0]*16
 stack_memory = Stack()
 
-ram[0x050:0x09f+1] = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
+ram[0x050:0x09f] = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
 0x20, 0x60, 0x20, 0x20, 0x70, # 1
 0xF0, 0x10, 0xF0, 0x80, 0xF0, # 2
 0xF0, 0x10, 0xF0, 0x10, 0xF0, # 3
@@ -58,7 +56,7 @@ ram[0x050:0x09f+1] = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
 0xE0, 0x90, 0x90, 0x90, 0xE0, # D
 0xF0, 0x80, 0xF0, 0x80, 0xF0, # E
 0xF0, 0x80, 0xF0, 0x80, 0x80 ] # F
-print(ram[0x050:0x09f+1])
+
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -175,12 +173,6 @@ while True:
         case "B":
             NNN = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             pc = NNN + registry[0]
-
-        case "C":
-            VX = int("0x"+second_nibble, 16)
-            NN = int("0x"+ third_nibble + fourth_nibble, 16)
-            registry[VX] = random.randint(0, 255) & NN
-        
         case "D" | "d":
             vx =int("0x"+second_nibble, 16)
             vy = int("0x"+third_nibble, 16)
@@ -213,23 +205,6 @@ while True:
                             #screen.set_at((draw_x, draw_y), (255,255,255,255))
                             pygame.draw.rect(screen, (255,255,255,255), (draw_x, draw_y, 10, 10))
                             print("filling pixel")
-        case "E":
-            VX = int("0x"+second_nibble, 16)
-            match(third_nibble+fourth_nibble):
-                case "9E":
-                    pass
-                case "A1":
-                    pass
-        case "F":
-            match(third_nibble+fourth_nibble):
-                case "1E":
-                    pass
-                case "29":
-                    VX = int("0x"+second_nibble, 16)
-                    #since one font character takes up 5 bytes, we multiply by 5 to get the correct font 
-                    I = 0x50 + ((registry[VX] & 0x0F) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
-
-                     
     pc += 2
     #updated at a rate of 60 times a second
     delay_timer -= 1
