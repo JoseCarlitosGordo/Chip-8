@@ -4,6 +4,7 @@ from stack import Stack
 import time
 import sys
 import random
+import keyboard
 #memory (4 KiloBytes of ram)
 
 file_path = sys.argv[1]
@@ -157,17 +158,10 @@ while True:
                     registry[VX] <<= 1
                     registry[15] = shifted_out_val
                 
-
-                    
-                    
-
-
                 case "7":
                     registry[15] = 1 if registry[VY] > registry[VX] else 0
                     registry[VX] = registry[VY] - registry[VX]
                 
-
-
         case "9":
             VX = int("0x"+second_nibble, 16)
             VY = int("0x"+third_nibble, 16)
@@ -177,19 +171,23 @@ while True:
         case "A" | "a":
             I = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             print(f"set I to {int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)} ")
+
         case "B":
             NNN = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             pc = NNN + registry[0]
+
         case "C":
             VX = int("0x"+second_nibble, 16)
             NN = int("0x"+ third_nibble + fourth_nibble, 16)
             registry[VX] = random.randint(0, 255) & NN
+        
         case "D" | "d":
             vx =int("0x"+second_nibble, 16)
             vy = int("0x"+third_nibble, 16)
             initial_x = (registry[vx] % 64)* 10 
             initial_y = (registry[vy] % 32 ) * 10
             registry[15] = 0
+             
            
             
             n = int(fourth_nibble, 16)
@@ -216,20 +214,29 @@ while True:
                             pygame.draw.rect(screen, (255,255,255,255), (draw_x, draw_y, 10, 10))
                             print("filling pixel")
         case "E":
+            VX = int("0x"+second_nibble, 16)
             match(third_nibble+fourth_nibble):
                 case "9E":
-                    pass
+                    if keyboard.is_pressed(registry[VX] &0xF):
+                        pc += 2
                 case "A1":
-                    pass
+                    if not keyboard.is_pressed(registry[VX] &0xF):
+                        pc += 2
         case "F":
             match(third_nibble+fourth_nibble):
                 case "1E":
                     pass
                 case "29":
                     VX = int("0x"+second_nibble, 16)
-                    I = 0x50 + (registry[VX] * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
+                    #since one font character takes up 5 bytes, we multiply by 5 to get the correct font 
+                    I = 0x50 + ((registry[VX] & 0xF) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
+
                      
     pc += 2
+    #updated at a rate of 60 times a second
+    delay_timer -= 1
+    sound_timer -= 1
+
 
 
             
