@@ -3,6 +3,7 @@ from constants import COUNTER, WIDTH, HEIGHT
 from stack import Stack
 import time
 import sys
+import keyboard
 #memory (4 KiloBytes of ram)
 
 file_path = sys.argv[1]
@@ -205,6 +206,23 @@ while True:
                             #screen.set_at((draw_x, draw_y), (255,255,255,255))
                             pygame.draw.rect(screen, (255,255,255,255), (draw_x, draw_y, 10, 10))
                             print("filling pixel")
+        case "E":
+            VX = int("0x"+second_nibble, 16)
+            match(third_nibble+fourth_nibble):
+                case "9E":
+                    if keyboard.is_pressed(registry[VX] &0xF):
+                        pc += 2
+                case "A1":
+                    if not keyboard.is_pressed(registry[VX] &0xF):
+                        pc += 2
+        case "F":
+            match(third_nibble+fourth_nibble):
+                case "1E":
+                    pass
+                case "29":
+                    VX = int("0x"+second_nibble, 16)
+                    #since one font character takes up 5 bytes, we multiply by 5 to get the correct font 
+                    I = 0x50 + ((registry[VX] & 0xF) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
     pc += 2
     #updated at a rate of 60 times a second
     delay_timer -= 1
