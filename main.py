@@ -8,6 +8,20 @@ import sys
 import keyboard
 #memory (4 KiloBytes of ram)
 
+def check_for_collision():
+    collision = False
+    for dx in range(10):
+        for dy in range(10):
+            if screen.get_at((draw_x + dx, draw_y + dy))[:3] != (0, 0, 0):
+                collision = True
+                break
+        if collision:
+            break
+    return collision
+
+
+
+
 file_path = sys.argv[1]
 shift_vx_in_place = int(sys.argv[2])
 print(sys.argv)
@@ -15,8 +29,7 @@ ram = bytearray(4096)
 try:
     with open(file_path, "rb") as f:
         binary_file = f.read()
-        for i in range(len(binary_file)):
-            ram[0x200+i] = int(binary_file[i])
+        ram[0x1ff: 0x1ff + len(binary_file)] = binary_file
 
 except FileNotFoundError:
     print("Error: The file was not found.")
@@ -28,7 +41,7 @@ except Exception as e:
     print("Error! " + e)
 
 #PROGRAM COUNTER (All programs start at location 0x200 in memory. Since instructions are 16 bits, instructions take up 16 bits (2 bytes of RAM)
-pc = 0x200 + 1
+pc = 0x200
 print(f"{ram[pc]:02x}")
 #timers
 delay_timer = min(max(0, COUNTER), 255) #holder for 8-bit timer
@@ -70,6 +83,7 @@ while True:
         print("Program reached end of memory.")
         break # or sys.exit()
     current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}"
+    new_pc = pc + 2
     print("current_instruction:" +current_instruction)
    
   
@@ -84,35 +98,35 @@ while True:
     match first_half_byte:
         case"0":
             match second_nibble + third_nibble + fourth_nibble:
-                case"0E0":
+                case"0e0":
 
                     screen.fill((0,0,0))
-                case"0EE":
-                    pc = stack_memory.pop()
+                case"0ee":
+                    new_pc = stack_memory.pop()
     
         case"1":
-            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) -1 
+            new_pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) 
             print(f"jumped to {hex(pc)}")
         
         case "2":
             #store the last known position of program in stack_memory to be popped later before jumping
             stack_memory.push(pc)
-            pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)  - 1
+            new_pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) 
         case "3":
             VX = int("0x"+second_nibble, 16)
             NN = int("0x"+third_nibble + fourth_nibble, 16)
             if registry[VX]== NN:
-                pc += 2
+                new_pc += 2
         case "4":
             VX = int("0x"+second_nibble, 16)
             NN = int("0x"+third_nibble + fourth_nibble, 16)
             if registry[VX] != NN:
-                pc += 2
+                new_pc += 2
         case "5":
             VX = int("0x"+second_nibble, 16)
             VY = int("0x"+third_nibble, 16)
             if registry[VX] == registry[VY]:
-                pc += 2
+                new_pc += 2
 
         case "6":
             registry[int("0x"+second_nibble, 16)] = int("0x"+ third_nibble + fourth_nibble, 16)
@@ -135,15 +149,12 @@ while True:
                 case "3":
                     registry[VX] = registry[VX] ^ registry[VY]
                 case "4":
-                    registry[VX] += registry[VY]
-                    #if num goes over 8-bit limit, set flag register to 1/True
-                    if registry[VX] > 255:
-                        registry[15] = 1
-                    else:
-                        registry[15] = 0
+                    sum_val = registry[VX] + registry[VY]
+                    registry[15] = 1 if sum_val > 255 else 0
+                    registry[VX] = sum_val & 0xFF
                 case "5":
                     registry[15] = 1 if registry[VX] > registry[VY] else 0
-                    registry[VX] -= registry[VY]
+                    registry[VX] = (registry[VX] - registry[VY]) & 0xFF
                 case "6":
                     if shift_vx_in_place == 0:
                         registry[VX] = registry[VY]
@@ -161,83 +172,106 @@ while True:
                 
                 case "7":
                     registry[15] = 1 if registry[VY] > registry[VX] else 0
-                    registry[VX] = registry[VY] - registry[VX]
+                    registry[VX] = (registry[VY] - registry[VX]) & 0xFF
                 
         case "9":
             VX = int("0x"+second_nibble, 16)
             VY = int("0x"+third_nibble, 16)
             if registry[VX] != registry[VY]:
-                pc += 2
+                new_pc += 2
 
         case "A" | "a":
             I = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             print(f"set I to {int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)} ")
 
-        case "B":
+        case "B" | "b":
             NNN = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
-            pc = NNN + registry[0]
-        case "C":
+            new_pc = NNN + registry[0]
+        case "C" | "c":
             VX = int("0x"+second_nibble, 16)
             NN = int("0x"+ third_nibble + fourth_nibble, 16)
             registry[VX] = random.randint(0, 255) & NN
         case "D" | "d":
-            vx =int("0x"+second_nibble, 16)
-            vy = int("0x"+third_nibble, 16)
-            initial_x = registry[vx] % 64
-            initial_y = registry[vy] % 32
+            vx_idx = int(second_nibble, 16)
+            vy_idx = int(third_nibble, 16)
+            initial_x = registry[vx_idx] % 64
+            initial_y = registry[vy_idx] % 32
             registry[15] = 0
-             
-           
-            
             n = int(fourth_nibble, 16)
             
+            for row in range(n):
+                sprite_byte = ram[I + row]
+                for col in range(8):
+                    sprite_pixel = (sprite_byte >> (7 - col)) & 1
+                    if sprite_pixel == 1:
+                        # Calculate the actual screen pixel coordinates
+                        curr_x = (initial_x + col)
+                        curr_y = (initial_y + row)
+                        
+                        # Stop drawing if we hit the edge of the 64x32 space
+                        if curr_x < 64 and curr_y < 32:
+                            # Scale coordinates for Pygame (x10)
+                            draw_x = curr_x * 10
+                            draw_y = curr_y * 10
+                            
+                            collision = check_for_collision()
+                            # Standard XOR logic
+                            if collision:
+                                registry[15] = 1
+                                pygame.draw.rect(screen, (0, 0, 0), (draw_x, draw_y, 10, 10))
+                            else:
+                                pygame.draw.rect(screen, (255, 255, 255), (draw_x, draw_y, 10, 10))
+
+
             #iterate over rows
-            for i in range(n):
-                if I + i >= len(ram):
-                    print("breaking in draw")
-                    break
-                draw_y = ((initial_y +i) %32) *10 
-                if draw_y >= 320:
-                    continue
-                current_pixel = ram[I+i]
-                #iterate over cols
-                for k in range(8):
-                    draw_x = ((initial_x + k) %64) *10
-                    if draw_x >= 640:
-                        continue
-                    #use bitshifting to get the rightmost bit in the byte and check if it is a 1
-                    if (current_pixel >> (7 - k)) & 1:
-                        if screen.get_at((draw_x+5, draw_y+5))[:3]!= (0,0,0):
-                            pygame.draw.rect(screen, (0,0,0,255), (draw_x, draw_y, 10, 10))
-                            print("clearing pixel")
-                            registry[15] = 1
+            # for i in range(n):
+            #     if I + i >= len(ram):
+            #         print("breaking in draw")
+            #         break
+            #     draw_y = ((initial_y +i) %32) *10 
+            #     if draw_y >= 320:
+            #         continue
+            #     current_pixel = ram[I+i]
+            #     #iterate over cols
+            #     for k in range(8):
+            #         draw_x = ((initial_x + k) %64) *10
+            #         if draw_x >= 640:
+            #             continue
+            #         #use bitshifting to get the rightmost bit in the byte and check if it is a 1
+            #         if (current_pixel >> (7 - k)) & 1:
+            #             if screen.get_at((draw_x+5, draw_y+5))[:3]!= (0,0,0):
+            #                 pygame.draw.rect(screen, (0,0,0), (draw_x+5, draw_y+5, 10, 10))
+            #                 print("clearing pixel")
+            #                 registry[15] = 1
                     
-                        else:
-                            #screen.set_at((draw_x, draw_y), (255,255,255,255))
-                            pygame.draw.rect(screen, (255,255,255,255), (draw_x, draw_y, 10, 10))
-                            print("filling pixel")
-        case "E":
+            #             else:
+            #                 #screen.set_at((draw_x, draw_y), (255,255,255,255))
+            #                 pygame.draw.rect(screen, (255,255,255), (draw_x+5, draw_y+5, 10, 10))
+            #                 print("filling pixel")
+
+        case "E" | "e":
             VX = int("0x"+second_nibble, 16)
             match(third_nibble+fourth_nibble):
-                case "9E":
+                case "9e":
                     if keyboard.is_pressed(registry[VX] &0xF):
-                        pc += 2
-                case "A1":
+                        new_pc += 2
+                case "a1":
                     if not keyboard.is_pressed(registry[VX] &0xF):
-                        pc += 2
-        case "F":
+                        new_pc += 2
+        case "F" | "f":
+            VX = int("0x"+second_nibble, 16)
             match(third_nibble+fourth_nibble):
-                case "1E":
-                    pass
+                case "1e":
+                    I = (I + registry[VX]) & 0xFFF
                 case "29":
-                    VX = int("0x"+second_nibble, 16)
+                    
                     #since one font character takes up 5 bytes, we multiply by 5 to get the correct font 
                     I = 0x50 + ((registry[VX] & 0xF) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
-    pc += 2
+    
     #updated at a rate of 60 times a second
-    delay_timer -= 1
-    sound_timer -= 1
-
+    if delay_timer > 0: delay_timer -= 1
+    if sound_timer > 0: sound_timer -= 1
+    pc = new_pc
 
 
             
@@ -248,4 +282,6 @@ while True:
     # 4. Update Screen
     pygame.display.flip()
     # 5. Sleep to maintain 500Hz-1kHz
-    time.sleep(1/60)
+    time.sleep(1/30)
+
+
