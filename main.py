@@ -5,7 +5,8 @@ from constants import COUNTER, WIDTH, HEIGHT
 from stack import Stack
 import time
 import sys
-import keyboard
+from pynput.keyboard import Key, Listener
+
 #memory (4 KiloBytes of ram)
 
 def check_for_collision():
@@ -18,19 +19,31 @@ def check_for_collision():
         if collision:
             break
     return collision
+pygame_keys_to_keyboard = { pygame.K_1: 0x1, pygame.K_2: 0x2, pygame.K_3: 0x3, pygame.K_4: 0xC,
+    pygame.K_q: 0x4, pygame.K_w: 0x5, pygame.K_e: 0x6, pygame.K_r: 0xD,
+    pygame.K_a: 0x7, pygame.K_s: 0x8, pygame.K_d: 0x9, pygame.K_f: 0xE,
+    pygame.K_z: 0xA, pygame.K_x: 0x0, pygame.K_c: 0xB, pygame.K_v: 0xF}
+#stores keyboard 
+keyboard_state = {}
 
+def pressed(py_game_key):
+    mapped_key = pygame_keys_to_keyboard[py_game_key]
+    keyboard_state[mapped_key] = 1
+
+def notPressed(py_game_key):
+    mapped_key = pygame_keys_to_keyboard[py_game_key]
+    keyboard_state[mapped_key] = 1
 
 
 
 file_path = sys.argv[1]
 shift_vx_in_place = int(sys.argv[2])
-print(sys.argv)
+
 ram = bytearray(4096) 
 try:
     with open(file_path, "rb") as f:
         binary_file = f.read()
         ram[0x1ff: 0x1ff + len(binary_file)] = binary_file
-
 except FileNotFoundError:
     print("Error: The file was not found.")
 except PermissionError:
@@ -42,16 +55,14 @@ except Exception as e:
 
 #PROGRAM COUNTER (All programs start at location 0x200 in memory. Since instructions are 16 bits, instructions take up 16 bits (2 bytes of RAM)
 pc = 0x200
-print(f"{ram[pc]:02x}")
+
 #timers
 delay_timer = min(max(0, COUNTER), 255) #holder for 8-bit timer
 sound_timer = min(max(0, COUNTER), 255)
+
 #index register
 I = 0
 current_instruction = None
-
-# for i in range(512, len(ram)):
-#     ram[i] = hex(ram[i])
 
 registry = [0]*16
 stack_memory = Stack()
@@ -249,14 +260,18 @@ while True:
             #                 pygame.draw.rect(screen, (255,255,255), (draw_x+5, draw_y+5, 10, 10))
             #                 print("filling pixel")
 
+        #gets the state of keyboard vals by checking for 
         case "E" | "e":
             VX = int("0x"+second_nibble, 16)
+            #use a mask to only retrieve values from 0x0 to 0xF
+            expected_keycode = registry[VX] & 0xF
             match(third_nibble+fourth_nibble):
+                #if the 
                 case "9e":
-                    if keyboard.is_pressed(registry[VX] &0xF):
+                    if keyboard_state[expected_keycode] == 1:
                         new_pc += 2
                 case "a1":
-                    if not keyboard.is_pressed(registry[VX] &0xF):
+                    if keyboard_state[expected_keycode] == 0:
                         new_pc += 2
         case "F" | "f":
             VX = int("0x"+second_nibble, 16)
@@ -272,12 +287,16 @@ while True:
     if delay_timer > 0: delay_timer -= 1
     if sound_timer > 0: sound_timer -= 1
     pc = new_pc
-
+    for event in pygame.event.get():
+        #listens for any changes in keycode
+        if event.type == pygame.KEYDOWN:
+            pressed(event.key)
+        if event.type == pygame.KEYUP:
+            notPressed(event.key)
 
             
 
-
-
+    
     # 3. Update Timers (60Hz)
     # 4. Update Screen
     pygame.display.flip()
