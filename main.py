@@ -25,12 +25,17 @@ pygame_keys_to_keyboard = { pygame.K_1: 0x1, pygame.K_2: 0x2, pygame.K_3: 0x3, p
     pygame.K_z: 0xA, pygame.K_x: 0x0, pygame.K_c: 0xB, pygame.K_v: 0xF}
 #stores keyboard 
 keyboard_state = {}
+prev_keyboard_state = {}
 
 def pressed(py_game_key):
+    if py_game_key not in pygame_keys_to_keyboard:
+        return
     mapped_key = pygame_keys_to_keyboard[py_game_key]
     keyboard_state[mapped_key] = 1
 
 def notPressed(py_game_key):
+    if py_game_key not in pygame_keys_to_keyboard:
+        return
     mapped_key = pygame_keys_to_keyboard[py_game_key]
     keyboard_state[mapped_key] = 1
 
@@ -93,7 +98,7 @@ while True:
     if pc >= len(ram) - 1:
         print("Program reached end of memory.")
         break # or sys.exit()
-    current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}"
+    current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}".lower()
     new_pc = pc + 2
     print("current_instruction:" +current_instruction)
    
@@ -173,7 +178,7 @@ while True:
                     shifted_out_val = registry[VX] & 1
                     registry[VX] >>= 1
                     registry[15] = shifted_out_val
-                case "E" | "e":
+                case "e":
                     if shift_vx_in_place == 0:
                         registry[VX] = registry[VY]
                     
@@ -191,18 +196,18 @@ while True:
             if registry[VX] != registry[VY]:
                 new_pc += 2
 
-        case "A" | "a":
+        case "a":
             I = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             print(f"set I to {int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)} ")
 
-        case "B" | "b":
+        case "b":
             NNN = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
             new_pc = NNN + registry[0]
-        case "C" | "c":
+        case "c":
             VX = int("0x"+second_nibble, 16)
             NN = int("0x"+ third_nibble + fourth_nibble, 16)
             registry[VX] = random.randint(0, 255) & NN
-        case "D" | "d":
+        case "d":
             vx_idx = int(second_nibble, 16)
             vy_idx = int(third_nibble, 16)
             initial_x = registry[vx_idx] % 64
@@ -233,56 +238,57 @@ while True:
                             else:
                                 pygame.draw.rect(screen, (255, 255, 255), (draw_x, draw_y, 10, 10))
 
-
-            #iterate over rows
-            # for i in range(n):
-            #     if I + i >= len(ram):
-            #         print("breaking in draw")
-            #         break
-            #     draw_y = ((initial_y +i) %32) *10 
-            #     if draw_y >= 320:
-            #         continue
-            #     current_pixel = ram[I+i]
-            #     #iterate over cols
-            #     for k in range(8):
-            #         draw_x = ((initial_x + k) %64) *10
-            #         if draw_x >= 640:
-            #             continue
-            #         #use bitshifting to get the rightmost bit in the byte and check if it is a 1
-            #         if (current_pixel >> (7 - k)) & 1:
-            #             if screen.get_at((draw_x+5, draw_y+5))[:3]!= (0,0,0):
-            #                 pygame.draw.rect(screen, (0,0,0), (draw_x+5, draw_y+5, 10, 10))
-            #                 print("clearing pixel")
-            #                 registry[15] = 1
-                    
-            #             else:
-            #                 #screen.set_at((draw_x, draw_y), (255,255,255,255))
-            #                 pygame.draw.rect(screen, (255,255,255), (draw_x+5, draw_y+5, 10, 10))
-            #                 print("filling pixel")
-
         #gets the state of keyboard vals by checking for 
-        case "E" | "e":
+        case "e":
             VX = int("0x"+second_nibble, 16)
             #use a mask to only retrieve values from 0x0 to 0xF
             expected_keycode = registry[VX] & 0xF
             match(third_nibble+fourth_nibble):
-                #if the 
+                #checks keyboard state (1 for pressed, 0 for not pressed)
                 case "9e":
-                    if keyboard_state[expected_keycode] == 1:
-                        new_pc += 2
+                    if expected_keycode in keyboard_state:
+
+                        if keyboard_state[expected_keycode] == 1:
+                            new_pc += 2
                 case "a1":
-                    if keyboard_state[expected_keycode] == 0:
+                    if expected_keycode not in keyboard_state or keyboard_state[expected_keycode] == 0:
                         new_pc += 2
-        case "F" | "f":
+        case "f":
             VX = int("0x"+second_nibble, 16)
             match(third_nibble+fourth_nibble):
+                case "0a":
+                        key_pressed = False
+                        for i in range(16):
+                            if i in prev_keyboard_state and prev_keyboard_state[i] == 1 and keyboard_state[i] == 0:
+                                registry[VX] = i
+                                key_pressed = True
+                                break
+
+
+                        if not key_pressed:
+                            new_pc -= 2
+
                 case "1e":
-                    I = (I + registry[VX]) & 0xFFF
+                    #since I is 16 bits, we mask it with a 16 bit mask 
+                    I = (I + registry[VX]) & 0xFFFF
                 case "29":
                     
-                    #since one font character takes up 5 bytes, we multiply by 5 to get the correct font 
-                    I = 0x50 + ((registry[VX] & 0xF) * 5) #brackets calculates how many bytes need to be skipped over to get to desired font address
-    
+                    #since one font character takes up 5 bytes, we multiply by 5 to get the correct starting point of the char in memory
+                    I = 0x50 + ((registry[VX] & 0xF) * 5) 
+                case "33":
+                    number = registry[VX] & 0xFF
+                    divisor = 100
+                    current_i = I
+                    while divisor >= 1: 
+                        number_to_add_to_memory = number // divisor
+                        if number_to_add_to_memory != 0:
+                            ram[current_i] = number_to_add_to_memory
+                        number = number % divisor
+                        divisor /= 10
+
+
+
+
     #updated at a rate of 60 times a second
     if delay_timer > 0: delay_timer -= 1
     if sound_timer > 0: sound_timer -= 1
@@ -291,16 +297,19 @@ while True:
         #listens for any changes in keycode
         if event.type == pygame.KEYDOWN:
             pressed(event.key)
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
         if event.type == pygame.KEYUP:
             notPressed(event.key)
 
             
 
-    
+    prev_keyboard_state = keyboard_state
     # 3. Update Timers (60Hz)
     # 4. Update Screen
     pygame.display.flip()
     # 5. Sleep to maintain 500Hz-1kHz
-    time.sleep(1/30)
+    time.sleep(1/60)
 
 
