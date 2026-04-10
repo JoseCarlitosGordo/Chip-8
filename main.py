@@ -25,7 +25,7 @@ pygame_keys_to_keyboard = { pygame.K_1: 0x1, pygame.K_2: 0x2, pygame.K_3: 0x3, p
     pygame.K_z: 0xA, pygame.K_x: 0x0, pygame.K_c: 0xB, pygame.K_v: 0xF}
 #stores keyboard 
 keyboard_state = {}
-prev_keyboard_state = {}
+
 
 def pressed(py_game_key):
     if py_game_key not in pygame_keys_to_keyboard:
@@ -37,7 +37,7 @@ def notPressed(py_game_key):
     if py_game_key not in pygame_keys_to_keyboard:
         return
     mapped_key = pygame_keys_to_keyboard[py_game_key]
-    keyboard_state[mapped_key] = 1
+    keyboard_state[mapped_key] = 0
 
 
 
@@ -122,11 +122,10 @@ while True:
     
         case"1":
             new_pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) 
-            print(f"jumped to {hex(pc)}")
         
         case "2":
             #store the last known position of program in stack_memory to be popped later before jumping
-            stack_memory.push(pc)
+            stack_memory.push(new_pc)
             new_pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) 
         case "3":
             VX = int("0x"+second_nibble, 16)
@@ -175,16 +174,19 @@ while True:
                     if shift_vx_in_place == 0:
                         registry[VX] = registry[VY]
                     
-                    shifted_out_val = registry[VX] & 1
+                   
+                
+                    registry[15] = registry[VX] & 1
                     registry[VX] >>= 1
-                    registry[15] = shifted_out_val
+                    registry[VX] &= 0xff
                 case "e":
                     if shift_vx_in_place == 0:
                         registry[VX] = registry[VY]
                     
-                    shifted_out_val = registry[VX] & 128
+                   
+                    registry[15] = (registry[VX] >> 7) & 1
                     registry[VX] <<= 1
-                    registry[15] = shifted_out_val
+                    registry[VX] &= 0xff
                 
                 case "7":
                     registry[15] = 1 if registry[VY] > registry[VX] else 0
@@ -259,7 +261,7 @@ while True:
                 case "0a":
                         key_pressed = False
                         for i in range(16):
-                            if i in prev_keyboard_state and prev_keyboard_state[i] == 1 and keyboard_state[i] == 0:
+                            if i in keyboard_state and keyboard_state[i] == 1:
                                 registry[VX] = i
                                 key_pressed = True
                                 break
@@ -284,7 +286,7 @@ while True:
                         if number_to_add_to_memory != 0:
                             ram[current_i] = number_to_add_to_memory
                         number = number % divisor
-                        divisor /= 10
+                        divisor //= 10
 
 
 
@@ -305,7 +307,7 @@ while True:
 
             
 
-    prev_keyboard_state = keyboard_state
+   
     # 3. Update Timers (60Hz)
     # 4. Update Screen
     pygame.display.flip()
