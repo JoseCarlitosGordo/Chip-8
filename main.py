@@ -92,7 +92,8 @@ ram[0x050:0x09f] = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
+beep_sound = pygame.mixer.Sound("beep.mp3")
+beep_sound.set_volume(0.75)
 while True:
     # 1. Fetch 16-bit opcode (2 bytes)
     if pc >= len(ram) - 1:
@@ -287,7 +288,14 @@ while True:
                             ram[current_i] = number_to_add_to_memory
                         number = number % divisor
                         divisor //= 10
-
+                case "55":
+                    for i in range(VX+1):
+                        current_register = registry[VX + i]
+                        ram[I + i] = registry[i]
+                case "65":
+                     for i in range(VX+1):
+                        current_register = registry[VX + i]
+                        registry[i] = ram[I+i]
 
 
 
