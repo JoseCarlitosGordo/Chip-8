@@ -1,7 +1,7 @@
 [project]
 name = "chip-8"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple chip-8 emulator that can run applications through the command line"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
