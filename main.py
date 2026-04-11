@@ -1,11 +1,12 @@
 import random
 
 import pygame
+import os
+os.environ['SDL_AUDIODRIVER'] = 'pulseaudio'
 from constants import COUNTER, WIDTH, HEIGHT
 from stack import Stack
 import time
 import sys
-from pynput.keyboard import Key, Listener
 
 #memory (4 KiloBytes of ram)
 
@@ -62,9 +63,9 @@ except Exception as e:
 pc = 0x200
 
 #timers
-delay_timer = min(max(0, COUNTER), 255) #holder for 8-bit timer
-sound_timer = min(max(0, COUNTER), 255)
-
+delay_timer = 0 #holder for 8-bit timer
+sound_timer = 0
+timer_count = 0
 #index register
 I = 0
 current_instruction = None
@@ -89,8 +90,9 @@ ram[0x050:0x09f] = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
 0xF0, 0x80, 0xF0, 0x80, 0xF0, # E
 0xF0, 0x80, 0xF0, 0x80, 0x80 ] # F
 
-
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
+pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 beep_sound = pygame.mixer.Sound("beep.mp3")
 beep_sound.set_volume(0.75)
@@ -102,8 +104,10 @@ while True:
     current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}".lower()
     new_pc = pc + 2
     print("current_instruction:" +current_instruction)
+
+        
    
-  
+
     # 2. Decode & Execute instruction
         #obtain the first part of the hexadecimal number (0x2000)
     first_half_byte = current_instruction[0]
@@ -119,7 +123,9 @@ while True:
 
                     screen.fill((0,0,0))
                 case"0ee":
-                    new_pc = stack_memory.pop()
+                    if len(stack_memory.list) > 0:
+
+                        new_pc = stack_memory.pop()
     
         case"1":
             new_pc = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16) 
@@ -139,10 +145,13 @@ while True:
             if registry[VX] != NN:
                 new_pc += 2
         case "5":
-            VX = int("0x"+second_nibble, 16)
-            VY = int("0x"+third_nibble, 16)
-            if registry[VX] == registry[VY]:
-                new_pc += 2
+            match(fourth_nibble):
+                case "0":
+
+                    VX = int("0x"+second_nibble, 16)
+                    VY = int("0x"+third_nibble, 16)
+                    if registry[VX] == registry[VY]:
+                        new_pc += 2
 
         case "6":
             registry[int("0x"+second_nibble, 16)] = int("0x"+ third_nibble + fourth_nibble, 16)
@@ -194,10 +203,13 @@ while True:
                     registry[VX] = (registry[VY] - registry[VX]) & 0xFF
                 
         case "9":
-            VX = int("0x"+second_nibble, 16)
-            VY = int("0x"+third_nibble, 16)
-            if registry[VX] != registry[VY]:
-                new_pc += 2
+            match(fourth_nibble):
+                case "0":
+
+                    VX = int("0x"+second_nibble, 16)
+                    VY = int("0x"+third_nibble, 16)
+                    if registry[VX] != registry[VY]:
+                        new_pc += 2
 
         case "a":
             I = int("0x"+ second_nibble + third_nibble + fourth_nibble, 16)
@@ -259,6 +271,13 @@ while True:
         case "f":
             VX = int("0x"+second_nibble, 16)
             match(third_nibble+fourth_nibble):
+                case "07":
+                    registry[VX] = delay_timer
+
+                case "15": 
+                    delay_timer = registry[VX] & 0xff
+                case "18":
+                    sound_timer = registry[VX] & 0xff
                 case "0a":
                         key_pressed = False
                         for i in range(16):
@@ -266,7 +285,7 @@ while True:
                                 registry[VX] = i
                                 key_pressed = True
                                 break
-
+                    
 
                         if not key_pressed:
                             new_pc -= 2
@@ -284,24 +303,30 @@ while True:
                     current_i = I
                     while divisor >= 1: 
                         number_to_add_to_memory = number // divisor
-                        if number_to_add_to_memory != 0:
-                            ram[current_i] = number_to_add_to_memory
+                        
+                        ram[current_i] = number_to_add_to_memory
                         number = number % divisor
                         divisor //= 10
+                        current_i += 1
                 case "55":
+                    #loops from v0 to VX to 
                     for i in range(VX+1):
-                        current_register = registry[VX + i]
+                        
                         ram[I + i] = registry[i]
                 case "65":
                      for i in range(VX+1):
-                        current_register = registry[VX + i]
+                        
                         registry[i] = ram[I+i]
 
-
-
+    timer_count += 1
     #updated at a rate of 60 times a second
-    if delay_timer > 0: delay_timer -= 1
-    if sound_timer > 0: sound_timer -= 1
+    if timer_count >= 8:
+
+        if delay_timer > 0: delay_timer -= 1
+        if sound_timer > 0: 
+            beep_sound.play()
+            sound_timer -= 1
+        timer_count = 0
     pc = new_pc
     for event in pygame.event.get():
         #listens for any changes in keycode
@@ -312,14 +337,16 @@ while True:
             sys.exit()
         if event.type == pygame.KEYUP:
             notPressed(event.key)
+    if pc < 0x200 or pc >= 0x1000:
+        print("INVALID PC:", hex(pc))
+        break
 
-            
 
-   
+    
     # 3. Update Timers (60Hz)
     # 4. Update Screen
     pygame.display.flip()
     # 5. Sleep to maintain 500Hz-1kHz
-    time.sleep(1/60)
+    time.sleep(1/500)
 
 
