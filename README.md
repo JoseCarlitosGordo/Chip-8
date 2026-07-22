@@ -1,3 +1,10 @@
+
+
+
+
+
+
+
 # Chip-8
 Chip-8 emulator that can run chip-8 applications through the command line
 
@@ -20,5 +27,8 @@ I've always been curious how developers are able to emulate consoles such as old
 `python3 main.py Invaders.ch8 0`
 
 Within this repository are multiple chip 8 applications. Feel free to mess around with them!
+
+https://github.com/user-attachments/assets/efaa5076-8589-45ac-adca-a9b402af162b
+
 
 
