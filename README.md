@@ -1,7 +1,7 @@
 # Chip-8
 Chip-8 emulator that can run chip-8 applications through the command line
 
-I've always been curious how developers are able to emulate consoles such as old nintendo consoles. Building a CHIP-8 emulator let me trace through exactly how a game like Pong or Tetris translates player input into pixels on a screen at the CPU level
+I've always been curious how developers are able to emulate consoles such as old nintendo consoles. Building a CHIP-8 emulator let me trace through exactly how a game like Pong or Tetris translates player input into pixels on a screen at the CPU level.
 # Quick Start
 ## Prerequisites
 - python 3.12 or later is preferred
