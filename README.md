@@ -1,6 +1,8 @@
 # Chip-8
-Simple chip-8 emulator that can run chip 8 applications through the command line
+Chip-8 emulator that can run chip-8 applications through the command line
 
+I've always been curious how developers are able to emulate consoles such as old nintendo consoles. Building a CHIP-8 emulator let me trace through exactly how a game like Pong or Tetris translates player input into pixels on a screen at the CPU level
+# Quick Start
 ## Prerequisites
 - python 3.12 or later is preferred
 - an installation of uv:
@@ -16,5 +18,7 @@ Simple chip-8 emulator that can run chip 8 applications through the command line
 - It is considered best practice (FOR THIS PROJECT) to keep the chip-8 application in the same relative path as the project for easy access
 ## Example Command
 `python3 main.py Invaders.ch8 0`
+
+Within this repository are multiple chip 8 applications. Feel free to mess around with them!
 
 

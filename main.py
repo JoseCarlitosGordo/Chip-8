@@ -3,7 +3,7 @@ import random
 import pygame
 import os
 os.environ['SDL_AUDIODRIVER'] = 'pulseaudio'
-from constants import COUNTER, WIDTH, HEIGHT
+from constants import WIDTH, HEIGHT
 from stack import Stack
 import time
 import sys
@@ -89,18 +89,21 @@ ram[0x050:0x09f] = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
 0xE0, 0x90, 0x90, 0x90, 0xE0, # D
 0xF0, 0x80, 0xF0, 0x80, 0xF0, # E
 0xF0, 0x80, 0xF0, 0x80, 0x80 ] # F
-
+clock = pygame.time.Clock
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 beep_sound = pygame.mixer.Sound("beep.mp3")
 beep_sound.set_volume(0.75)
+timer = pygame.time.Clock() 
 while True:
     # 1. Fetch 16-bit opcode (2 bytes)
     if pc >= len(ram) - 1:
         print("Program reached end of memory.")
         break # or sys.exit()
+    
+
     current_instruction = f"{ram[pc]:02x}{ram[pc+1]:02x}".lower()
     new_pc = pc + 2
     print("current_instruction:" +current_instruction)
@@ -252,7 +255,7 @@ while True:
                                 pygame.draw.rect(screen, (0, 0, 0), (draw_x, draw_y, 10, 10))
                             else:
                                 pygame.draw.rect(screen, (255, 255, 255), (draw_x, draw_y, 10, 10))
-
+            pygame.display.flip()
         #gets the state of keyboard vals by checking for 
         case "e":
             VX = int("0x"+second_nibble, 16)
@@ -340,13 +343,7 @@ while True:
     if pc < 0x200 or pc >= 0x1000:
         print("INVALID PC:", hex(pc))
         break
-
-
-    
-    # 3. Update Timers (60Hz)
-    # 4. Update Screen
-    pygame.display.flip()
-    # 5. Sleep to maintain 500Hz-1kHz
+ 
     time.sleep(1/500)
 
 
